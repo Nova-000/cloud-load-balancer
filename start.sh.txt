@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# 1. Install backend dependencies
+cd server
+npm install
+
+# Boot the 3 Node.js workers with distinct names
+SERVER_NAME="Server 1" PORT=3001 node index.js &
+SERVER_NAME="Server 2" PORT=3002 node index.js &
+SERVER_NAME="Server 3" PORT=3003 node index.js &
+
+# Return to the root directory
+cd ..
+
+# 3. Inject Render's dynamic port into the Nginx configuration
+# Render assigns a random port via the $PORT environment variable at runtime.
+# This swaps the ${PORT} placeholder in your template with the real number.
+envsubst '${PORT}' < loadbalancer/nginx.conf > /etc/nginx/nginx.conf
+
+# 4. Start Nginx in the foreground
+# 'daemon off' forces Nginx to stay in the foreground. Because this process 
+# never finishes, Docker keeps the entire container alive continuously.
+nginx -g 'daemon off;'
